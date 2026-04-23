@@ -120,10 +120,10 @@ export default function Chat({ instrument, difficulty, numResults }: RAGProps) {
               ))}
             </div>
 
-            {/* RIGHT: LLM answer grounded in those results */}
-            <div className="rag-llm-panel" style={{ backgroundColor: 'gray' }}>
-              <h3 style={{ color: '#000000' }}>🤖 AI Recommendation</h3>
-              <div className="rag-answer" style={{color: 'black'}}>{result.llm_answer}</div>
+            {/* LLM answer */}
+            <div className="rag-llm-panel">
+              <h3 id="llm-results">🤖 AI Recommendation</h3>
+              <div className="rag-answer">{result.llm_answer}</div>
             </div>
           </div>
         </div>
