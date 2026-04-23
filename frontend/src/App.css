@@ -776,12 +776,27 @@
 }
 
 .rag-answer {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: #dbdbdb;
+  border: 1px solid #dbdbdb;
   border-radius: 8px;
   padding: 1rem;
   white-space: pre-wrap;
   line-height: 1.6;
+  font-size: 18px;
+  font-family: 'Palatino', serif;
+  color: #000000;
+  margin-bottom: 0.75rem;
+}
+
+.rag-llm-panel {
+  background: #b4b4b4;
+}
+
+#llm-results {
+  font-size: 36px;
+  font-family: 'Palatino', serif;
+  color: #000000;
+  margin-bottom: 0.75rem;
 }
 
 @media (max-width: 700px) {
