@@ -4,6 +4,7 @@ Routes: React app serving and episode search API.
 To enable AI chat, set USE_LLM = True below. See llm_routes.py for AI code.
 """
 import os
+import ast
 import numpy as np
 from flask import send_from_directory, request, jsonify
 from models import db, Song
@@ -13,6 +14,7 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import normalize
 
 # ── AI toggle ────────────────────────────────────────────────────────────────
+# USE_LLM = False
 USE_LLM = True
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -49,6 +51,7 @@ def build_search_index():
         'duh', 'ha', 'hm', 'mm', 'wa', 'ba', 'sha', 'ra', 'ta', 'pa', 'eh', 'oooh'
     ]
     vectorizer = TfidfVectorizer(stop_words=custom_stopwords)
+    song_vectors = vectorizer.fit_transform(all_text)
     song_vectors = vectorizer.fit_transform(all_text)
 
     # SVD
@@ -89,68 +92,170 @@ def explain_svd(user_input, n_topics=3):
         })
     return explanations
 
-def recommend_by_lyrics(user_input, top_n=5, instrument="guitar", difficulty="all"):
+def get_all_genres():
+    return sorted(list(set(song.genres for song in songs_data if song.genres)))
+
+def song_has_genre(song, genre):
+    if not song.genres:
+        return False
+    try:
+        genres = ast.literal_eval(song.genres)
+    except:
+        return False
+
+    return genre.lower() in [g.lower() for g in genres]
+
+def recommend_by_lyrics(user_input, top_n=5, instrument="guitar", difficulty="all", genre="all"):
     global vectorizer, song_vectors, songs_data
 
-    # Cosine similarity score
     user_vector = vectorizer.transform([user_input])
     cosine_scores = cosine_similarity(user_vector, song_vectors).flatten()
-
-    # SVD score
     svd_scores = svd_search(user_input)
-
-    # Combined score = ALPHA * svd + (1 - ALPHA) * cosine
     combined_scores = ALPHA * svd_scores + (1 - ALPHA) * cosine_scores
 
-    if difficulty == "all":
-        indices = np.argsort(combined_scores)[::-1][:top_n]
-    else:
-        temp = np.argsort(combined_scores)[::-1]
-        indices = []
-        i = 0;
-        if difficulty == "easy":
-            low = 1
-            high = 4
-        elif difficulty == "medium":
-            low = 4.01
-            high = 7
-        else:
-            low = 7.01
-            high = 10
-            
-        while len(indices) < top_n and i < len(temp):
-            song = songs_data[temp[i]]
-            if instrument == "guitar":
-                if song.guitar_difficulty >= low and song.guitar_difficulty <= high:
-                    indices.append(temp[i])
-            else:
-                if song.piano_difficulty >= low and song.piano_difficulty <= high:
-                    indices.append(temp[i])
-            i += 1
+    candidates = []
 
+    for i, song in enumerate(songs_data):
+        if genre != "all" and not song_has_genre(song, genre):
+            continue
+        candidates.append(i)
+
+    ranked = sorted(
+        candidates,
+        key=lambda i: combined_scores[i],
+        reverse=True
+    )
 
     results = []
-    for idx in indices:
+    for idx in ranked:
+        song = songs_data[idx]
+
+        if difficulty == "easy":
+            low, high = 1, 4
+        elif difficulty == "medium":
+            low, high = 4.01, 7
+        elif difficulty == "hard":
+            low, high = 7.01, 10
+        else:
+            low, high = None, None
+
+        if low is not None:
+            score = song.guitar_difficulty if instrument == "guitar" else song.piano_difficulty
+            if not (low <= score <= high):
+                continue
+
         results.append([
-            songs_data[int(idx)],
-            float(combined_scores[int(idx)]) * 100,
-            float(cosine_scores[int(idx)]) * 100,
-            float(svd_scores[int(idx)]) * 100
+            song,
+            float(combined_scores[idx]) * 100,
+            float(cosine_scores[idx]) * 100,
+            float(svd_scores[idx]) * 100
         ])
+
+        if len(results) == top_n:
+            break
+
     return results
 
-def json_search(query, top_n=5, instrument="guitar", difficulty="all"):
+def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", genre="all"):
+    if not query or not query.strip():
+        return {"results": [], "message": "no result found"}
+
+    query_clean = query.strip().lower()
+
+    exact_song = None
+    for song in songs_data:
+        if song.title and song.title.strip().lower() == query_clean:
+            exact_song = song
+            break
+
+    if not exact_song:
+        return {"results": [], "message": "no result found"}
+
+    if isinstance(exact_song.lyrics, list):
+        seed_text = " ".join(exact_song.lyrics)
+    else:
+        seed_text = exact_song.lyrics or exact_song.title
+
+    similar_results = recommend_by_lyrics(
+        seed_text,
+        top_n=top_n + 1,
+        instrument=instrument,
+        difficulty=difficulty,
+        genre=genre
+    )
+
+    filtered_similars = [
+        s for s in similar_results
+        if s[0].title.lower() != query_clean
+    ][:top_n]
+
+    try:
+        genres = ast.literal_eval(exact_song.genres) if exact_song.genres else []
+    except:
+        genres = []
+
+    diff = (
+        exact_song.guitar_difficulty
+        if instrument == "guitar"
+        else exact_song.piano_difficulty
+    )
+
+    results = [{
+        'title': exact_song.title,
+        'artist': exact_song.artist,
+        'similarity': 100.0,
+        'chords': exact_song.chords,
+        'difficulty': diff,
+        'genres': genres,
+        'match_type': 'exact'
+    }]
+
+    for song, combined, cosine, svd in filtered_similars:
+        try:
+            genres = ast.literal_eval(song.genres) if song.genres else []
+        except:
+            genres = []
+
+        diff = (
+            song.guitar_difficulty
+            if instrument == "guitar"
+            else song.piano_difficulty
+        )
+
+        results.append({
+            'title': song.title,
+            'artist': song.artist,
+            'similarity': round(combined, 2),
+            'cosine_score': round(cosine, 2),
+            'svd_score': round(svd, 2),
+            'chords': song.chords,
+            'difficulty': diff,
+            'genres': genres,
+            'match_type': 'similar'
+        })
+
+    return {"results": results}
+
+def json_search(query, top_n=5, instrument="guitar", difficulty="all", exact_match=False, genre="all"):
+    if exact_match:
+        return exact_title_search(query, top_n, instrument, difficulty, genre)
+        
     if not query or not query.strip():
         query = "Love"
 
-    results = recommend_by_lyrics(query, top_n, instrument, difficulty)
-
+    results = recommend_by_lyrics(query, top_n, instrument, difficulty, genre)
+    
     # Get query's latent vector once
     query_tfidf = vectorizer.transform([query])
     query_latent = svd_model.transform(query_tfidf).flatten()
 
     matches = []
     for song in results:
+        try:
+            genres = ast.literal_eval(song[0].genres) if song[0].genres else []
+        except:
+           genres = []
+
         song_idx = songs_data.index(song[0])
         song_latent = lyrics_latent[song_idx]  # this specific song's latent vector
 
@@ -172,16 +277,16 @@ def json_search(query, top_n=5, instrument="guitar", difficulty="all"):
             diff = song[0].guitar_difficulty
         else:
             diff = song[0].piano_difficulty
-
         matches.append({
             'title': song[0].title,
             'artist': song[0].artist,
-            'similarity': round(song[1], 2),
-            'cosine_score': round(song[2], 2),
-            'svd_score': round(song[3], 2),
+            'similarity': round(song[1], 2),  
+            'cosine_score': round(song[2], 2), 
+            'svd_score': round(song[3], 2),  
             'chords': song[0].chords,
             'difficulty': diff,
-            'svd_explanation': per_song_explanation  # unique per song now
+            'genres': genres,
+            'svd_explanation': per_song_explanation  # unique per song
         })
 
     return {'results': matches}
@@ -201,22 +306,40 @@ def register_routes(app):
     def config():
         return jsonify({"use_llm": USE_LLM})
 
+    @app.route("/api/genres")
+    def genres():
+        songs = db.session.query(Song).all()
+        genre_set = set()
+        for song in songs:
+            if not song.genres:
+                continue
+            try:
+                parsed = ast.literal_eval(song.genres)
+            except:
+                continue
+            for g in parsed:
+                genre_set.add(g.strip().lower())
+
+        return jsonify(sorted(list(genre_set)))
+
     @app.route("/api/songs")
     def song_search():
         text = request.args.get("title", "")
         
         top_n = request.args.get("topn", 5 ,type=int)
+        exact_match = request.args.get("exact", "false").lower() == "true"
         print(f"Title: {text}")
         print(f"Num results: {top_n}")
         instrument = request.args.get("instrument", "")
         difficulty = request.args.get("difficulty", "")
+        genre = request.args.get("genre", "all")
         
         print(f"Instrument: {instrument}")
         print(f"Difficulty: {difficulty}")
-        return jsonify(json_search(text, top_n, instrument, difficulty))
+        return jsonify(json_search(text, top_n, instrument, difficulty, exact_match, genre))
 
     if USE_LLM:
         from llm_routes import register_chat_route
-        from rag_routes import register_rag_route  
+        from rag_routes import register_rag_route 
         register_chat_route(app, json_search)
         register_rag_route(app, json_search) 
