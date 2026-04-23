@@ -9,7 +9,7 @@
   min-height: 100vh;
   display: flex;
   justify-content: start;
-  align-items: center;
+  align-items: stretch;
   flex-direction: column;
   background-image: url("assets/background1.jpg");
   background-size: 100% 150%;
@@ -20,6 +20,18 @@
 
 
 /* ── Header ────────────────────────────────────────────────────────────────── */
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 380px minmax(600px, 1fr) 300px;
+  gap: 2.5rem;
+  width: 100%;
+  max-width: none;
+  margin-top: 0.5rem;
+  align-items: start;
+  justify-content: stretch;
+  padding: 0 2rem;
+}
 
 .top-text {
   display: flex;
@@ -64,7 +76,7 @@
   align-items: center;
   margin-top: 10px;
   margin-left: 80px;
-  padding: 12px;
+  padding: 14px;
   width: 700px;
   cursor: text;
   transition: box-shadow 0.2s;
@@ -85,11 +97,17 @@
 .input-box input {
   width: 100%;
   margin-left: 10px;
-  font-size: 16px;
+  font-size: 20px;
   border: none;
   outline: 0;
   background-color: transparent;
   font-family: 'Palatino', serif;
+  color: rgb(69, 69, 69);
+}
+
+#search-input::placeholder {
+  font-size: 20px;
+  color: rgb(69, 69, 69);
 }
 
 /* ── Search button ────────────────────────────────────────────────────────── */
@@ -223,20 +241,44 @@
   width: 20px;
 }
 
+#answer-box {
+  flex: 2;
+}
+
+.similar-header {
+  font-family: 'Palatino', serif;
+  margin: 1.25rem 0 0.5rem 0;
+  font-size: 24px;
+  color: #000000;
+  background: rgba(188, 187, 187, 0.85);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.explanation-box {
+  width: 100%;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  position: sticky;
+  top: 120px;
+}
+
 
 /* ── Filters ────────────────────────────────────────────────────────── */
 
 #filter-box {
+  position: sticky;
+  top: 120px;
   width: 100%;
-  max-width: 400px;
-  position: absolute;
-  left: 0;
-  padding-top: 100px;
-  transform: translateX(7%);
+  max-width: 320px;
+  padding-top: 0;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin-top: 2rem;
 }
 
 .filters {
@@ -451,15 +493,17 @@
 /* ── Search results ────────────────────────────────────────────────────────── */
 
 #answer-box {
-  width: 800px;
-  max-width: 100%;
+  width: 100%;
+  /* max-width: 900px;  */
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin-top: 2rem;
+  margin-top: 0;
+  justify-self: center;
 }
 
 .song-item {
+  width: 100%;
   padding: 1.5rem;
   background-color: #f8f9fa;
   opacity: 0.75;
@@ -507,8 +551,8 @@
   color: white;
   font-family: 'Palatino', serif;
   align-items: center;
-  margin-top: 20px;
   opacity: 0.75;
+  margin-top: 20px
 }
 
 .pos-dim {
@@ -546,8 +590,6 @@
 /* ── LLM mode: constrain answer-box so chat gets space ────────────────────── */
 
 .llm-mode #answer-box {
-  max-height: 250px;
-  overflow-y: auto;
   flex-shrink: 0;
 }
 
@@ -682,7 +724,7 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 1600px) {
+@media (max-width: 768px) {
   .google-colors h1 {
     font-size: 3rem;
   }
@@ -698,23 +740,6 @@
   #messages {
     padding: 0 8px 8px;
   }
-
-  #filter-box {
-    position: relative;
-    left: auto;
-    transform: none;
-    max-width: 100%;
-    width: 100%;
-    padding-top: 0;
-    margin-top: 2rem;
-    display: flex;
-    justify-content: center;
-  }
-
-  .filters {
-    width: 100%;
-    max-width: 400px;
-  }
 }
 
 .rag-container {
@@ -722,9 +747,17 @@
   margin-top: 1.5rem;
 }
 
+#rag-heading {
+  font-size: 2.5em;
+  font-family: 'Palatino', serif;
+  color: #000000;
+  margin-bottom: 0.25rem;
+}
+
 .rag-subtitle {
-  font-size: 0.85em;
-  color: #aaa;
+  font-size: 1.5em;
+  font-family: 'Palatino', serif;
+  color: #494949;
   margin: 0.25rem 0 1rem;
 }
 
@@ -740,16 +773,26 @@
   border-radius: 6px;
   border: 1px solid #555;
   background: rgba(255, 255, 255, 0.07);
-  color: inherit;
-  font-size: 1rem;
+  color: #000000;
+  font-family: 'Palatino', serif;
+  font-size: 2rem;
 }
 
 .rag-ir-query {
   background: rgba(255, 255, 255, 0.07);
+  font-family: 'Palatino', serif;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
-  font-size: 0.9em;
+  font-size: 18px;
+  color: black;
+}
+
+#ir-results {
+  font-size: 24px;
+  font-family: 'Palatino', serif;
+  color: #000000;
+  margin-bottom: 0.75rem;
 }
 
 .rag-columns {
@@ -771,6 +814,21 @@
   padding: 1rem;
   white-space: pre-wrap;
   line-height: 1.6;
+  font-size: 18px;
+  font-family: 'Palatino', serif;
+  color: #000000;
+  margin-bottom: 0.75rem;
+}
+
+.rag-llm-panel {
+  background: #b4b4b4;
+}
+
+#llm-results {
+  font-size: 36px;
+  font-family: 'Palatino', serif;
+  color: #000000;
+  margin-bottom: 0.75rem;
 }
 
 @media (max-width: 700px) {

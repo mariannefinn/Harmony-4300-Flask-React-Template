@@ -149,7 +149,7 @@ Run Flask and React separately with hot-reloading.
 **Terminal 1 — Flask backend:**
 ```bash
 python3 -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+source venv/bin/activate 
 pip install -r requirements.txt
 python src/app.py
 ```
