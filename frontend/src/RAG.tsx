@@ -54,8 +54,8 @@ export default function RAG({ instrument, difficulty, numResults }: RAGProps) {
 
   return (
     <div className="rag-container" style={{ backgroundColor: '#e2e4ea', color: 'white', padding: '20px' }}>
-      <h2>🎵 Ask AI for a Recommendation </h2>
-      <p className="rag-subtitle" style={{ color: '#031a20' }}>
+      <h2 id="rag-heading">🎵 Ask AI for a Recommendation </h2>
+      <p className="rag-subtitle">
         Using: <strong>{instrument}</strong> · <strong>{difficulty}</strong> difficulty · top <strong>{numResults}</strong>
        </p>
 

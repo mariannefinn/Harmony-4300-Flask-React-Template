@@ -25,6 +25,9 @@ songs_data = None
 svd_model = None
 lyrics_latent = None
 
+chord_vectorizer = None
+chord_vectors = None
+
 # Number of latent dimensions (tune between 50-200)
 N_COMPONENTS = 50 
 
@@ -32,7 +35,7 @@ N_COMPONENTS = 50
 ALPHA = 0.5        
 
 def build_search_index():
-    global vectorizer, song_vectors, songs_data, svd_model, lyrics_latent
+    global vectorizer, song_vectors, songs_data, svd_model, lyrics_latent, chord_vectorizer, chord_vectors
 
     songs_data = db.session.query(Song).all()
 
@@ -50,6 +53,13 @@ def build_search_index():
         'wanna', 'gotta', 'ain', 'don', 'cause', 'em', 'til', 'ya', 'yo',
         'duh', 'ha', 'hm', 'mm', 'wa', 'ba', 'sha', 'ra', 'ta', 'pa', 'eh', 'oooh'
     ]
+
+    # Cosine similarity TF-IDF
+    custom_stopwords = list(TfidfVectorizer(stop_words='english').get_stop_words()) + [
+        'da', 'na', 'la', 'oh', 'ah', 'ooh', 'uh', 'yeah', 'hey', 'gonna',
+        'wanna', 'gotta', 'ain', 'don', 'cause', 'em', 'til', 'ya', 'yo',
+        'duh', 'ha', 'hm', 'mm', 'wa', 'ba', 'sha', 'ra', 'ta', 'pa', 'eh', 'oooh'
+    ]
     vectorizer = TfidfVectorizer(stop_words=custom_stopwords)
     song_vectors = vectorizer.fit_transform(all_text)
     song_vectors = vectorizer.fit_transform(all_text)
@@ -59,6 +69,20 @@ def build_search_index():
     svd_model = TruncatedSVD(n_components=n_components, random_state=42)
     lyrics_latent = svd_model.fit_transform(song_vectors)
     lyrics_latent = normalize(lyrics_latent)
+
+    # Chord similarity for exact title match
+    def extract_progressions(chord_string, n=3):
+        chords = chord_string.split()
+        return [" ".join(chords[i:i+n]) for i in range(len(chords)-n+1)]
+
+    all_progressions = []
+    for song in songs_data:
+        chords = song.chords or ""
+        progs = extract_progressions(chords, n=3)
+        all_progressions.append(" ".join(progs))
+
+    chord_vectorizer = TfidfVectorizer()
+    chord_vectors = chord_vectorizer.fit_transform(all_progressions)
 
     print(f"Search index built: {len(all_text)} songs, {n_components} SVD dimensions")
 
@@ -161,7 +185,7 @@ def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", ge
         return {"results": [], "message": "no result found"}
 
     query_clean = query.strip().lower()
-
+    #finding exact song
     exact_song = None
     for song in songs_data:
         if song.title and song.title.strip().lower() == query_clean:
@@ -171,24 +195,50 @@ def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", ge
     if not exact_song:
         return {"results": [], "message": "no result found"}
 
+    # chord similarity
+    seed_idx = songs_data.index(exact_song)
+    chord_scores = chord_similarity_to_song(seed_idx)
+
+    # normalize chord scores
+    if np.max(chord_scores) > 0:
+        chord_scores = chord_scores / np.max(chord_scores)
+
+    # lyrics
     if isinstance(exact_song.lyrics, list):
         seed_text = " ".join(exact_song.lyrics)
     else:
         seed_text = exact_song.lyrics or exact_song.title
 
+    # Get more candidates for reranking
     similar_results = recommend_by_lyrics(
         seed_text,
-        top_n=top_n + 1,
+        top_n=top_n + 15,
         instrument=instrument,
         difficulty=difficulty,
         genre=genre
     )
 
-    filtered_similars = [
-        s for s in similar_results
-        if s[0].title.lower() != query_clean
-    ][:top_n]
+    # reranking with chords (70:30 ratio)
+    reranked = []
 
+    for song, combined, cosine, svd in similar_results:
+        if song.title.lower() == query_clean:
+            continue
+
+        idx = songs_data.index(song)
+
+        # Normalize lyrics score (combined is already 0–100)
+        lyrics_score = combined / 100.0
+        chord_score = chord_scores[idx]
+
+        final_score = 0.7 * lyrics_score + 0.3 * chord_score
+
+        reranked.append((song, final_score, cosine, svd, chord_score))
+
+    # sorting by blended score
+    reranked = sorted(reranked, key=lambda x: x[1], reverse=True)[:top_n]
+
+    # response
     try:
         genres = ast.literal_eval(exact_song.genres) if exact_song.genres else []
     except:
@@ -210,7 +260,7 @@ def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", ge
         'match_type': 'exact'
     }]
 
-    for song, combined, cosine, svd in filtered_similars:
+    for song, final_score, cosine, svd, chord_score in reranked:
         try:
             genres = ast.literal_eval(song.genres) if song.genres else []
         except:
@@ -225,9 +275,10 @@ def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", ge
         results.append({
             'title': song.title,
             'artist': song.artist,
-            'similarity': round(combined, 2),
+            'similarity': round(final_score * 100, 2),  # blended score
             'cosine_score': round(cosine, 2),
             'svd_score': round(svd, 2),
+            'chord_score': round(chord_score * 100, 2),  # NEW: expose chord influence
             'chords': song.chords,
             'difficulty': diff,
             'genres': genres,
@@ -235,6 +286,11 @@ def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", ge
         })
 
     return {"results": results}
+
+def chord_similarity_to_song(song_idx):
+    target_vec = chord_vectors[song_idx]
+    scores = cosine_similarity(target_vec, chord_vectors).flatten()
+    return scores
 
 def json_search(query, top_n=5, instrument="guitar", difficulty="all", exact_match=False, genre="all"):
     if exact_match:
