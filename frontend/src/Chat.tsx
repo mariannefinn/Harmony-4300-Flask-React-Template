@@ -5,138 +5,130 @@
  * When the backend returns a search_term event, it calls onSearchTerm
  * to update the search bar and results above.
  */
-import { useState, useRef, useEffect } from 'react'
-import SearchIcon from './assets/mag.png'
+import { useState} from 'react'
 
-interface Message {
-  text: string
-  isUser: boolean
-}
+type SVDExplanation = { dimension: number; strength: number; mood_words: string[] };
 
-interface ChatProps {
-  onSearchTerm: (term: string) => void
-}
+type IRResult = {
+  title: string;
+  artist: string;
+  similarity: number;
+  cosine_score: number;
+  svd_score: number;
+  chords: string[];
+  difficulty: number;
+  svd_explanation: SVDExplanation[];
+};
 
-function Chat({ onSearchTerm }: ChatProps): JSX.Element {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState<string>('')
-  const [loading, setLoading] = useState<boolean>(false)
-  const [suggestedSearch, setSuggestedSearch] = useState<string | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+type RAGResponse = {
+  original_query: string;
+  ir_query: string;
+  ir_results: IRResult[];
+  llm_answer: string;
+};
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+type RAGProps = {
+  instrument: string;
+  difficulty: string;
+  numResults: number;
+};
 
-  const sendMessage = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault()
-    const text = input.trim()
-    if (!text || loading) return
+export default function Chat({ instrument, difficulty, numResults }: RAGProps) {
+  const [query, setQuery] = useState("");
+  const [result, setResult] = useState<RAGResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-    setMessages(prev => [...prev, { text, isUser: true }])
-    setInput('')
-    setLoading(true)
-
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        setMessages(prev => [...prev, { text: 'Error: ' + (data.error || response.status), isUser: false }])
-        setLoading(false)
-        return
-      }
-
-      let assistantText = ''
-      setMessages(prev => [...prev, { text: '', isUser: false }])
-      setLoading(false)
-
-      const reader = response.body!.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6))
-              if (data.search_term !== undefined) {
-                setSuggestedSearch(data.search_term)
-              }
-              if (data.error) {
-                setMessages(prev => [...prev.slice(0, -1), { text: 'Error: ' + data.error, isUser: false }])
-                return
-              }
-              if (data.content !== undefined) {
-                assistantText += data.content
-                setMessages(prev => [...prev.slice(0, -1), { text: assistantText, isUser: false }])
-              }
-            } catch { /* ignore malformed lines */ }
-          }
-        }
-      }
-    } catch {
-      setMessages(prev => [...prev, { text: 'Something went wrong. Check the console.', isUser: false }])
-      setLoading(false)
+      const resp = await fetch("/api/rag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, instrument, difficulty, top_n: numResults }),
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      setResult(data);
+    } catch (e: any) {
+      setError(e.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <>
-      <div id="messages">
-        {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.isUser ? 'user' : 'assistant'}`}>
-            <p>{msg.text}</p>
-          </div>
-        ))}
-        {loading && (
-          <div className="loading-indicator visible">
-            <span className="loading-dot" />
-            <span className="loading-dot" />
-            <span className="loading-dot" />
-          </div>
-        )}
+    <div className="rag-container" style={{ backgroundColor: '#e2e4ea', color: 'white', padding: '20px' }}>
+      <h2 id="rag-heading">🎵 Ask AI for a Recommendation </h2>
+      <p className="rag-subtitle">
+        Using: <strong>{instrument}</strong> · <strong>{difficulty}</strong> difficulty · top <strong>{numResults}</strong>
+       </p>
 
-        {suggestedSearch && (
-          <div className="search-suggestion">
-            <button
-              onClick={() => {
-                onSearchTerm(suggestedSearch)
-                setSuggestedSearch(null)
-        }}
-      >
-            Search for: {suggestedSearch}
-          </button>
+      <div className="rag-input-row" style={{ backgroundColor: "#f0f2f5a6", padding: "10px" }}>
+        <input
+          className="rag-input" 
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          placeholder="e.g. 'sad for a rainy day'"
+        />
+        <button className="button" onClick={handleSearch} disabled={loading}>
+          {loading ? "Thinking..." : "Ask AI"}
+        </button>
       </div>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {result && (
+        <div className="rag-results">
+          <div className="rag-ir-query">
+            <strong>Rewritten IR query:</strong> <em>"{result.ir_query}"</em>
+          </div>
+
+          <div className="rag-columns">
+            {/* LEFT: raw IR results */}
+            <div className="rag-ir-panel">
+              <h3>📋 IR Results </h3>
+              {result.ir_results.map((song, i) => (
+                <div key={i} className="song-item">
+                  <h3 className="song-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{i + 1}. {song.title}</span>
+                    <span>Similarity: {song.similarity}%</span>
+                  </h3>
+                  <h4 className="song-artist">by {song.artist}</h4>
+                  <p className="song-chords">Chords: {song.chords}</p>
+                  <p className="song-difficulty">Difficulty: {song.difficulty}/10</p>
+                  <p className="song-scores" style={{ display: 'flex', gap: '1rem', fontSize: '0.85em', color: '#888' }}>
+                    <span>Cosine: {song.cosine_score}%</span>
+                    <span>SVD: {song.svd_score}%</span>
+                  </p>
+                  {song.svd_explanation?.length > 0 && (
+                    <div className="svd-explanation" style={{ marginTop: '0.5rem', fontSize: '0.82em', color: '#333', background: 'rgba(0,0,0,0.15)', borderRadius: '6px', padding: '0.5rem 0.75rem' }}>
+                      <strong>SVD Mood Analysis</strong>
+                      {song.svd_explanation.map((dim, j) => (
+                        <div key={j} style={{ marginTop: '0.25rem' }}>
+                          <span style={{ color: dim.strength >= 0 ? '#2d7a2d' : '#a83232' }}>
+                            <strong>Dimension {dim.dimension}</strong> (strength: {dim.strength})
+                          </span><br />
+                          <span style={{ color: '#ccc' }}>Mood words: {dim.mood_words.join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* RIGHT: LLM answer grounded in those results */}
+            <div className="rag-llm-panel" style={{ backgroundColor: 'gray' }}>
+              <h3 style={{ color: '#000000' }}>🤖 AI Recommendation</h3>
+              <div className="rag-answer" style={{color: 'black'}}>{result.llm_answer}</div>
+            </div>
+          </div>
+        </div>
       )}
-        <div ref={bottomRef} />
-      </div>
-
-      <div className="chat-bar">
-        <form className="input-row" onSubmit={sendMessage}>
-          <img src={SearchIcon} alt="" />
-          <input
-            type="text"
-            placeholder="Ask the AI about Keeping Up with the Kardashians"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            disabled={loading}
-            autoComplete="off"
-          />
-          <button type="submit" disabled={loading}>Send</button>
-        </form>
-      </div>
-    </>
-  )
+    </div>
+  );
 }
-
-export default Chat
