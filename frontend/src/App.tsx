@@ -3,8 +3,7 @@ import './App.css'
 import SearchIcon from './assets/mag.png'
 import Logo from './assets/harmony_logo.png'
 import { Song } from './types'
-// import Chat from './Chat'
-import RAG from './RAG'
+import Chat from './Chat'
 
 function App(): JSX.Element {
   const [useLlm, setUseLlm] = useState<boolean | null>(null)
@@ -355,7 +354,7 @@ function App(): JSX.Element {
 
       {/* rag mode */}
       {useLlm && (
-        <RAG
+        <Chat
           instrument={instrument}
           difficulty={difficulty}
           numResults={numResults}
