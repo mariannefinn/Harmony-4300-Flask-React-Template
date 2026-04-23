@@ -511,6 +511,38 @@
   opacity: 0.75;
 }
 
+.pos-dim {
+  font-size: 1.25rem;
+  padding: 0px 5px;
+  color: #249a00;
+  background-color: #cbf9c6;
+  border-radius: 10px;
+  line-height: 1.6;
+  margin-bottom: 0rem;
+  font-family: 'Georgia', serif;
+  width: fit-content;
+}
+
+.neg-dim {
+  font-size: 1.25rem;
+  padding: 0px 5px;
+  color: #9a0000;
+  background-color: #f9c6c6;
+  border-radius: 10px;
+  line-height: 1.6;
+  margin-bottom: 0rem;
+  font-family: 'Georgia', serif;
+  width: fit-content;
+}
+
+.moods {
+  font-size: 1rem;
+  color: #000000;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+  font-family: 'Georgia', serif;
+}
+
 /* ── LLM mode: constrain answer-box so chat gets space ────────────────────── */
 
 .llm-mode #answer-box {
@@ -707,13 +739,13 @@
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   border: 1px solid #555;
-  background: rgba(255,255,255,0.07);
+  background: rgba(255, 255, 255, 0.07);
   color: inherit;
   font-size: 1rem;
 }
 
 .rag-ir-query {
-  background: rgba(255,255,255,0.07);
+  background: rgba(255, 255, 255, 0.07);
   padding: 0.5rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
@@ -733,8 +765,8 @@
 }
 
 .rag-answer {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 1rem;
   white-space: pre-wrap;
@@ -742,5 +774,7 @@
 }
 
 @media (max-width: 700px) {
-  .rag-columns { grid-template-columns: 1fr; }
+  .rag-columns {
+    grid-template-columns: 1fr;
+  }
 }

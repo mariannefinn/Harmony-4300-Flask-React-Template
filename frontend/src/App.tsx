@@ -157,11 +157,16 @@ function App(): JSX.Element {
                   {song.match_type !== "exact" && song.svd_explanation?.length > 0 && (
                     <div className="svd-explanation">
                       <strong>SVD Mood Analysis</strong>
+                      <br />
+                      <strong>Dimensions:</strong>
                       {song.svd_explanation.map((dim, i) => (
                         <div key={i}>
-                          <strong>Dimension {dim.dimension}</strong> (strength: {dim.strength})
-                          <br />
-                          Mood words: {dim.mood_words.join(', ')}
+                          <div className={dim.strength > 0 ? 'pos-dim' : 'neg-dim'}>{dim.dimension}: {dim.strength}</div>
+                          <div className='moods'>
+                            Mood words: {dim.mood_words.join(', ')}
+                          </div>
+
+
                         </div>
                       ))}
                     </div>
