@@ -74,7 +74,7 @@ function App(): JSX.Element {
                 placeholder={
                   exactMatch
                     ? "Search for a specific song to learn (e.g. Let It Be, Bohemian Rhapsody)"
-                    : "Search for a vibe (e.g. sad rainy day, happy summer road trip)"
+                    : "Search for a vibe (e.g. sad rainy day)"
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
