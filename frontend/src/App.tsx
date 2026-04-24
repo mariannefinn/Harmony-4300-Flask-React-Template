@@ -73,7 +73,7 @@ function App(): JSX.Element {
                 id="search-input"
                 placeholder={
                   exactMatch
-                    ? "Search for a specific song to learn (e.g. Let It Be, Bohemian Rhapsody)"
+                    ? "Search for a specific song to learn (e.g. Bohemian Rhapsody)"
                     : "Search for a vibe (e.g. sad rainy day)"
                 }
                 value={searchTerm}
