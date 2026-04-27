@@ -241,17 +241,19 @@ def recommend_by_lyrics(user_input, top_n=5, instrument="guitar", difficulty="al
 
     return results
 
-def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", genre="all"):
-    if not query or not query.strip():
-        return {"results": [], "message": "no result found"}
+def exact_title_search(song_id=None, query=None, top_n=5, instrument="guitar", difficulty="all", genre="all"):   
+    if song_id is not None:
+        exact_song = next((s for s in songs_data if s.id == song_id), None)
 
-    query_clean = query.strip().lower()
-    #finding exact song
-    exact_song = None
-    for song in songs_data:
-        if song.title and song.title.strip().lower() == query_clean:
-            exact_song = song
-            break
+    else:
+        if not query or not isinstance(query, str):
+            return {"results": [], "message": "no result found"}
+
+        query_clean = query.strip().lower()
+        exact_song = next(
+            (s for s in songs_data if s.title and s.title.strip().lower() == query_clean),
+            None
+        )
 
     if not exact_song:
         return {"results": [], "message": "no result found"}
@@ -283,7 +285,7 @@ def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", ge
     reranked = []
 
     for song, combined, cosine, svd in similar_results:
-        if song.title.lower() == query_clean:
+        if song.id == exact_song.id:
             continue
 
         idx = songs_data.index(song)
@@ -312,6 +314,7 @@ def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", ge
     )
 
     results = [{
+        'id': exact_song.id, #new
         'title': exact_song.title,
         'artist': exact_song.artist,
         'similarity': 100.0,
@@ -334,6 +337,7 @@ def exact_title_search(query, top_n=5, instrument="guitar", difficulty="all", ge
         )
 
         results.append({
+            'id': song.id, #new
             'title': song.title,
             'artist': song.artist,
             'similarity': round(final_score * 100, 2),  # blended score
@@ -353,9 +357,9 @@ def chord_similarity_to_song(song_idx):
     scores = cosine_similarity(target_vec, chord_vectors).flatten()
     return scores
 
-def json_search(query, top_n=5, instrument="guitar", difficulty="all", exact_match=False, genre="all"):
+def json_search(query=None, top_n=5, instrument="guitar", difficulty="all", exact_match=False, genre="all", song_id=None):
     if exact_match:
-        return exact_title_search(query, top_n, instrument, difficulty, genre)
+        return exact_title_search(song_id=song_id, query=query, top_n=top_n, instrument=instrument, difficulty=difficulty, genre=genre)
         
     if not query or not query.strip():
         query = "Love"
@@ -405,6 +409,7 @@ def json_search(query, top_n=5, instrument="guitar", difficulty="all", exact_mat
         else:
             diff = song[0].piano_difficulty
         matches.append({
+            'id': song[0].id,
             'title': song[0].title,
             'artist': song[0].artist,
             'similarity': round(song[1], 2),  
@@ -449,13 +454,30 @@ def register_routes(app):
 
         return jsonify(sorted(list(genre_set)))
 
+    @app.route("/api/song_titles") #new
+    def song_titles():
+        query = request.args.get("q", "").lower()
+
+        matches = []
+        for song in songs_data:
+            if song.title and query in song.title.lower():
+                matches.append({
+                    "id": song.id,
+                    "title": song.title,
+                    "artist": song.artist
+                })
+
+        return jsonify(matches[:10])
+
     @app.route("/api/songs")
     def song_search():
         text = request.args.get("title", "")
-        
         top_n = request.args.get("topn", 5 ,type=int)
         exact_match = request.args.get("exact", "false").lower() == "true"
+        song_id = request.args.get("song_id", type=int) #new
+        print(f"Song ID: {song_id}")
         print(f"Title: {text}")
+        print(f"Exact match: {exact_match}")
         print(f"Num results: {top_n}")
         instrument = request.args.get("instrument", "")
         difficulty = request.args.get("difficulty", "")
@@ -463,8 +485,8 @@ def register_routes(app):
         
         print(f"Instrument: {instrument}")
         print(f"Difficulty: {difficulty}")
-        return jsonify(json_search(text, top_n, instrument, difficulty, exact_match, genre))
-
+        return jsonify(json_search(query=text, song_id=song_id, top_n=top_n, instrument=instrument, difficulty=difficulty, exact_match=exact_match, genre=genre))
+        #new, before just text
     if USE_LLM:
         from llm_routes import register_chat_route
         from rag_routes import register_rag_route 
