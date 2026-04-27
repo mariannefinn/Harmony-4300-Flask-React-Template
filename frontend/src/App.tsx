@@ -3,8 +3,8 @@ import './App.css'
 import SearchIcon from './assets/mag.png'
 import Logo from './assets/harmony_logo.png'
 import { Song } from './types'
-// import Chat from './Chat'
-import RAG from './RAG'
+import Chat from './Chat'
+// import RAG from './RAG'
 
 function App(): JSX.Element {
   const [useLlm, setUseLlm] = useState<boolean | null>(null)
@@ -19,6 +19,8 @@ function App(): JSX.Element {
   const [genre, setGenre] = useState<string>("all")
   const [genreOptions, setGenreOptions] = useState<string[]>([])
   const [genreInput, setGenreInput] = useState<string>("")
+  const [selectedSong, setSelectedSong] = useState<{ id: number, title: string, artist: string } | null>(null) // new
+  const [suggestions, setSuggestions] = useState<any[]>([]) //new
 
   useEffect(() => {
     fetch('/api/genres').then(r => r.json()).then(data => setGenreOptions(data))
@@ -39,12 +41,29 @@ function App(): JSX.Element {
       setSongs([])
       return
     }
+
+    const queryParam = exactMatch && selectedSong
+      ? `song_id=${selectedSong.id}`
+      : `title=${encodeURIComponent(value)}`
+
     const response = await fetch(
-      `/api/songs?title=${encodeURIComponent(value)}&topn=${encodeURIComponent(numResults)}&instrument=${encodeURIComponent(instrument)}&difficulty=${encodeURIComponent(difficulty)}&exact=${exactMatch}&genre=${encodeURIComponent(genre)}`
+      `/api/songs?${queryParam}&topn=${encodeURIComponent(numResults)}&instrument=${encodeURIComponent(instrument)}&difficulty=${encodeURIComponent(difficulty)}&exact=${exactMatch}&genre=${encodeURIComponent(genre)}`
     )
     const data = await response.json()
     setSongs(data.results ?? [])
+
   }
+
+  const fetchSuggestions = async (value: string) => {
+    if (!value) {
+      setSuggestions([])
+      return
+    }
+
+    const res = await fetch(`/api/song_titles?q=${encodeURIComponent(value)}`)
+    const data = await res.json()
+    setSuggestions(data)
+  } //new
 
   if (useLlm === null) return <></>
 
@@ -77,9 +96,37 @@ function App(): JSX.Element {
                     ? "Search for a specific song to learn (e.g. Let It Be, Bohemian Rhapsody)"
                     : "Search for a vibe (e.g. sad rainy day, happy summer road trip)"
                 }
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={exactMatch ? (selectedSong?.title || searchTerm) : searchTerm}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setSearchTerm(val)
+
+                  if (exactMatch) {
+                    setSelectedSong(null)
+                    fetchSuggestions(val)
+                  }
+                }} /* new */
+              // value={searchTerm}
+              // onChange={(e) => setSearchTerm(e.target.value)}
               />
+
+              {exactMatch && suggestions.length > 0 && (
+                <div className="suggestions-dropdown">
+                  {suggestions.map((s, i) => (
+                    <div
+                      key={i}
+                      className="suggestion-item"
+                      onClick={() => {
+                        setSelectedSong(s)
+                        setSearchTerm(s.title)
+                        setSuggestions([])
+                      }}
+                    >
+                      {s.title} — {s.artist}
+                    </div>
+                  ))}
+                </div>
+              )} {/* new */}
             </div>
 
             <div className="search-button">
@@ -104,14 +151,14 @@ function App(): JSX.Element {
 
         </div>
         {/* no results */}
-        <div className="no-result">
+        {/* <div className="no-result">
           {hasSearched &&
             exactMatch &&
             lastSearchSubmitted.trim() !== '' &&
             songs.length === 0 && (
               <p>No result found!</p>
             )}
-        </div>
+        </div> */} {/* new */}
       </div>
 
       {/* layout */}
@@ -355,7 +402,7 @@ function App(): JSX.Element {
 
       {/* rag mode */}
       {useLlm && (
-        <RAG
+        <Chat
           instrument={instrument}
           difficulty={difficulty}
           numResults={numResults}

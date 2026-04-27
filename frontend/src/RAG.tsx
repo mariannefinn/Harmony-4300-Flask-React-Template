@@ -83,7 +83,7 @@ export default function RAG({ instrument, difficulty, numResults }: RAGProps) {
           <div className="rag-columns">
             {/* LEFT: raw IR results */}
             <div className="rag-ir-panel">
-              <h3>📋 IR Results </h3>
+              <h3 id="ir-results">📋 IR Results </h3>
               {result.ir_results.map((song, i) => (
                 <div key={i} className="song-item">
                   <h3 className="song-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
