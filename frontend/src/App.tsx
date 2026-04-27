@@ -4,7 +4,6 @@ import SearchIcon from './assets/mag.png'
 import Logo from './assets/harmony_logo.png'
 import { Song } from './types'
 import Chat from './Chat'
-// import RAG from './RAG'
 
 function App(): JSX.Element {
   const [useLlm, setUseLlm] = useState<boolean | null>(null)
@@ -93,8 +92,8 @@ function App(): JSX.Element {
                 id="search-input"
                 placeholder={
                   exactMatch
-                    ? "Search for a specific song to learn (e.g. Let It Be, Bohemian Rhapsody)"
-                    : "Search for a vibe (e.g. sad rainy day, happy summer road trip)"
+                    ? "Search for a specific song to learn (e.g. Bohemian Rhapsody)"
+                    : "Search for a vibe (e.g. sad rainy day)"
                 }
                 value={exactMatch ? (selectedSong?.title || searchTerm) : searchTerm}
                 onChange={(e) => {
@@ -329,11 +328,14 @@ function App(): JSX.Element {
                 {song.match_type !== "exact" && song.svd_explanation?.length > 0 && (
                   <div className="svd-explanation" style={{ marginTop: '0.75rem' }}>
                     <strong>SVD Mood Analysis</strong>
+                    <br />
+                    <strong>Dimensions:</strong>
                     {song.svd_explanation.map((dim, i) => (
                       <div key={i}>
-                        <strong>Dimension {dim.dimension}</strong> (strength: {dim.strength})
-                        <br />
-                        Mood words: {dim.mood_words.join(', ')}
+                        <div className={dim.strength > 0 ? 'pos-dim' : 'neg-dim'}>{dim.dimension}: {dim.strength}</div>
+                        <div className='moods'>
+                          Mood words: {dim.mood_words.join(', ')}
+                        </div>
                       </div>
                     ))}
                   </div>

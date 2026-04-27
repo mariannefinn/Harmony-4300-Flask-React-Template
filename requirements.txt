@@ -14,20 +14,20 @@ h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
 idna==3.11
-infosci-spark-client @ git+https://github.com/MrPeterss/infosci-spark-client.git@20b5e9dc8f9bb3286ee907aba7dd7f4fc4167d79
+git+https://github.com/MrPeterss/infosci-spark-client.git
 itsdangerous==2.2.0
 Jinja2==3.1.6
 jiter==0.14.0
 joblib==1.5.3
 MarkupSafe==3.0.3
-numpy==2.2.6
+numpy
 packaging==26.0
 pydantic==2.13.3
 pydantic_core==2.46.3
 python-dotenv
 requests==2.33.1
-scikit-learn==1.8.0
-scipy==1.17.1
+scikit-learn
+scipy
 six==1.17.0
 sniffio==1.3.1
 SQLAlchemy==2.0.36

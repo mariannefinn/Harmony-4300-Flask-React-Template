@@ -32,7 +32,60 @@ chord_vectors = None
 N_COMPONENTS = 50 
 
 # Blend weight: 0 = pure cosine, 1 = pure SVD
-ALPHA = 0.5        
+ALPHA = 0.5 
+
+latent_dim_names = [
+    "Melancholy",
+    "Reflection",
+    "Heartache",
+    "Swagger",
+    "Dreamscape",
+    "Hope",
+    "Nostalgia",
+    "Noise",
+    "Confidence",
+    "Longing",
+    "Turmoil",
+    "Performance",
+    "Confession",
+    "Rock Anthem",
+    "Conflict",
+    "Escape",
+    "Loneliness",
+    "Dark Romance",
+    "Nightlife",
+    "Wonder",
+    "Existence",
+    "Fragility",
+    "Resolve",
+    "Storytelling",
+    "Finality",
+    "Tenderness",
+    "Regret",
+    "Resilience",
+    "Transformation",
+    "Starlight",
+    "Devotion",
+    "Soulsearching",
+    "Yearning",
+    "Intensity",
+    "Forever",
+    "Perseverance",
+    "Belonging",
+    "Struggle",
+    "Motion",
+    "Chaos",
+    "Recovery",
+    "Change",
+    "Tension",
+    "Upheaval",
+    "Togetherness",
+    "Reminiscence",
+    "Healing",
+    "Identity",
+    "Lessons",
+    "Attitude"
+]      
 
 def build_search_index():
     global vectorizer, song_vectors, songs_data, svd_model, lyrics_latent, chord_vectorizer, chord_vectors
@@ -85,6 +138,14 @@ def build_search_index():
     chord_vectors = chord_vectorizer.fit_transform(all_progressions)
 
     print(f"Search index built: {len(all_text)} songs, {n_components} SVD dimensions")
+    # for dim in range(50):
+    #         top_word_indices = np.argsort(svd_model.components_[dim])[::1][:50]
+    #         top_words = [vectorizer.get_feature_names_out()[i] for i in top_word_indices]
+    #         print(f"dim: {dim}")
+    #         print(f"{top_words}")
+    #         # for word in top_words:
+    #         #     print(f"{word}")
+
 
 def svd_search(user_input):
     """Project query into SVD latent space and compute cosine similarity."""
@@ -321,17 +382,27 @@ def json_search(query=None, top_n=5, instrument="guitar", difficulty="all", exac
 
         # Element-wise product: high where BOTH query and song activate the same dimension
         combined_activation = query_latent * song_latent
-        top_dims = np.argsort(np.abs(combined_activation))[::-1][:3]
-
+        
+        pos_top_dims = np.argsort(combined_activation)[::-1][:3]
+        neg_top_dims = np.argsort(combined_activation)[::1][:3]
         per_song_explanation = []
-        for dim in top_dims:
+        for dim in pos_top_dims:
             top_word_indices = np.argsort(svd_model.components_[dim])[::-1][:5]
             top_words = [vectorizer.get_feature_names_out()[i] for i in top_word_indices]
             per_song_explanation.append({
-                "dimension": int(dim),
+                "dimension": latent_dim_names[int(dim)],
                 "strength": round(float(combined_activation[dim]), 4),
                 "mood_words": top_words
             })
+        for dim in neg_top_dims:
+            top_word_indices = np.argsort(svd_model.components_[dim])[::-1][:5]
+            top_words = [vectorizer.get_feature_names_out()[i] for i in top_word_indices]
+            per_song_explanation.append({
+                "dimension": latent_dim_names[int(dim)],
+                "strength": round(float(combined_activation[dim]), 4),
+                "mood_words": top_words
+            })
+            
 
         if instrument == "guitar":
             diff = song[0].guitar_difficulty

@@ -308,8 +308,8 @@
   top: 120px;
   width: 100%;
   max-width: 320px;
-  padding-top: 0;          
-  margin-top: 0;           
+  padding-top: 0;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -589,6 +589,38 @@
   margin-top: 20px
 }
 
+.pos-dim {
+  font-size: 1.25rem;
+  padding: 0px 5px;
+  color: #249a00;
+  background-color: #cbf9c6;
+  border-radius: 10px;
+  line-height: 1.6;
+  margin-bottom: 0rem;
+  font-family: 'Georgia', serif;
+  width: fit-content;
+}
+
+.neg-dim {
+  font-size: 1.25rem;
+  padding: 0px 5px;
+  color: #9a0000;
+  background-color: #f9c6c6;
+  border-radius: 10px;
+  line-height: 1.6;
+  margin-bottom: 0rem;
+  font-family: 'Georgia', serif;
+  width: fit-content;
+}
+
+.moods {
+  font-size: 1rem;
+  color: #000000;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+  font-family: 'Georgia', serif;
+}
+
 /* ── LLM mode: constrain answer-box so chat gets space ────────────────────── */
 
 .llm-mode #answer-box {
@@ -749,7 +781,7 @@
   margin-top: 1.5rem;
 }
 
-#rag-heading{
+#rag-heading {
   font-size: 2.5em;
   font-family: 'Palatino', serif;
   color: #000000;
@@ -774,7 +806,7 @@
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   border: 1px solid #555;
-  background: rgba(255,255,255,0.07);
+  background: rgba(255, 255, 255, 0.07);
   color: #000000;
   font-family: 'Palatino', serif;
   font-size: 2rem;
@@ -782,12 +814,11 @@
 
 .rag-ir-query {
   background: rgba(255,255,255,0.07);
-  font-family: 'Palatino', serif;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
   font-size: 18px;
-  color:black;
+  color: black;
 }
 
 #ir-results {
@@ -810,8 +841,8 @@
 }
 
 .rag-answer {
-  background: #dbdbdb;
-  border: 1px solid #dbdbdb;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px;
   padding: 1rem;
   white-space: pre-wrap;
@@ -834,5 +865,7 @@
 }
 
 @media (max-width: 700px) {
-  .rag-columns { grid-template-columns: 1fr; }
+  .rag-columns {
+    grid-template-columns: 1fr;
+  }
 }
