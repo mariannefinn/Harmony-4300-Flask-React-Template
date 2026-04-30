@@ -29,63 +29,113 @@ chord_vectorizer = None
 chord_vectors = None
 
 # Number of latent dimensions (tune between 50-200)
-N_COMPONENTS = 50 
+N_COMPONENTS = 100 
 
 # Blend weight: 0 = pure cosine, 1 = pure SVD
 ALPHA = 0.5 
 
-latent_dim_names = [
-    "Melancholy",
-    "Reflection",
-    "Heartache",
-    "Swagger",
-    "Dreamscape",
-    "Hope",
-    "Nostalgia",
+latent_dim_names = latent_dim_names = [
     "Noise",
-    "Confidence",
-    "Longing",
-    "Turmoil",
-    "Performance",
-    "Confession",
-    "Rock Anthem",
-    "Conflict",
-    "Escape",
-    "Loneliness",
-    "Dark Romance",
-    "Nightlife",
-    "Wonder",
-    "Existence",
-    "Fragility",
-    "Resolve",
-    "Storytelling",
-    "Finality",
-    "Tenderness",
-    "Regret",
-    "Resilience",
-    "Transformation",
-    "Starlight",
-    "Devotion",
-    "Soulsearching",
+    "Everyday",
+    "Sadness",
+    "Warmth",
+    "Swagger",
+    "Nostalgia",
     "Yearning",
-    "Intensity",
-    "Forever",
-    "Perseverance",
-    "Belonging",
+    "Romance",
+    "Regret",
+    "Spirituality",
+    "Desire",
+    "Pain",
+    "Memory",
+    "Reverence",
+    "Intimacy",
+    "Euphoria",
+    "Apology",
+    "Isolation",
+    "Grace",
+    "Contentment",
+    "Gentleness",
     "Struggle",
-    "Motion",
-    "Chaos",
-    "Recovery",
-    "Change",
-    "Tension",
-    "Upheaval",
-    "Togetherness",
-    "Reminiscence",
+    "Growth",
+    "Comfort",
+    "Trust",
+    "Wonder",
+    "Melancholy",
+    "Celebration",
+    "Grit",
+    "Optimism",
+    "Affection",
+    "Worship",
+    "Friendship",
+    "Belief",
+    "Passion",
+    "Serenity",
+    "Awe",
+    "Connection",
+    "Momentum",
+    "Defiance",
+    "Festivity",
+    "Anxiety",
+    "Drive",
+    "Guilt",
+    "Freedom",
+    "Dreaming",
     "Healing",
-    "Identity",
-    "Lessons",
-    "Attitude"
-]      
+    "Change",
+    "Craving",
+    "Vitality",
+    "Rebellion",
+    "Aspiration",
+    "Radiance",
+    "Devastation",
+    "Remorse",
+    "Relief",
+    "Resilience",
+    "Tenderness",
+    "Drift",
+    "Intensity",
+    "Clarity",
+    "Belonging",
+    "Restlessness",
+    "Transcendence",
+    "Playfulness",
+    "Despair",
+    "Hope",
+    "Admiration",
+    "Endurance",
+    "Whimsy",
+    "Solitude",
+    "Recklessness",
+    "Balance",
+    "Sincerity",
+    "Depth",
+    "Elevation",
+    "Stillness",
+    "Compassion",
+    "Glow",
+    "Turbulence",
+    "Harmony",
+    "Awakening",
+    "Disillusion",
+    "Renewal",
+    "Drifting",
+    "Fulfillment",
+    "Softness",
+    "Darkness",
+    "Release",
+    "Quiet",
+    "Courage",
+    "Fragility",
+    "Expansion",
+    "Reflection",
+    "Brightness",
+    "Closure",
+    "Anticipation",
+    "Weight",
+    "Flow",
+    "Rebirth"
+]
 
 def build_search_index():
     global vectorizer, song_vectors, songs_data, svd_model, lyrics_latent, chord_vectorizer, chord_vectors
@@ -138,7 +188,7 @@ def build_search_index():
     chord_vectors = chord_vectorizer.fit_transform(all_progressions)
 
     print(f"Search index built: {len(all_text)} songs, {n_components} SVD dimensions")
-    # for dim in range(50):
+    # for dim in range(n_components):
     #         top_word_indices = np.argsort(svd_model.components_[dim])[::1][:50]
     #         top_words = [vectorizer.get_feature_names_out()[i] for i in top_word_indices]
     #         print(f"dim: {dim}")
@@ -383,8 +433,8 @@ def json_search(query=None, top_n=5, instrument="guitar", difficulty="all", exac
         # Element-wise product: high where BOTH query and song activate the same dimension
         combined_activation = query_latent * song_latent
         
-        pos_top_dims = np.argsort(combined_activation)[::-1][:3]
-        neg_top_dims = np.argsort(combined_activation)[::1][:3]
+        pos_top_dims = np.argsort(combined_activation)[::-1][:2]
+        neg_top_dims = np.argsort(combined_activation)[::1][:2]
         per_song_explanation = []
         for dim in pos_top_dims:
             top_word_indices = np.argsort(svd_model.components_[dim])[::-1][:5]
@@ -470,6 +520,8 @@ def register_routes(app):
         return jsonify(matches[:10])
 
     @app.route("/api/songs")
+     
+    
     def song_search():
         text = request.args.get("title", "")
         top_n = request.args.get("topn", 5 ,type=int)

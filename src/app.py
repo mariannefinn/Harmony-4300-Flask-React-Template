@@ -29,13 +29,14 @@ db.init_app(app)
 
 # Function to initialize database, change this to your own database initialization logic
 def init_db():
+    print(f"INIT")
     with app.app_context():
         # Create all tables
         db.create_all()
         
         # Initialize database with data from init.json if empty
         if Song.query.count() == 0:
-            csv_file_path = os.path.join(current_directory, 'music_with_difficulties.csv')
+            csv_file_path = os.path.join(current_directory, 'FINAL_MUSIC.csv')
             with open(csv_file_path, 'r') as file:
                 data = csv.reader(file)
                 idx = 0
